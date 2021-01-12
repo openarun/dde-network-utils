@@ -51,8 +51,8 @@ ConnectivityChecker::ConnectivityChecker(QObject *parent) : QObject(parent)
     m_checkConnectivityTimer =  new QTimer(this);
     m_checkConnectivityTimer->setInterval(TIMERINTERVAL);
 
-//    connect(m_checkConnectivityTimer, &QTimer::timeout, this,
-//               &ConnectivityChecker::startCheck);
+    connect(m_checkConnectivityTimer, &QTimer::timeout, this,
+               &ConnectivityChecker::startCheck);
 
     m_checkConnectivityTimer->start();
 }

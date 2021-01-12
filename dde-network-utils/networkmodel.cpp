@@ -57,8 +57,8 @@ NetworkModel::NetworkModel(QObject *parent)
     , m_connectivityChecker(new ConnectivityChecker)
     , m_connectivityCheckThread(new QThread(this))
 {
-//    connect(this, &NetworkModel::needCheckConnectivitySecondary,
-//            m_connectivityChecker, &ConnectivityChecker::startCheck);
+    connect(this, &NetworkModel::needCheckConnectivitySecondary,
+            m_connectivityChecker, &ConnectivityChecker::startCheck);
     connect(m_connectivityChecker, &ConnectivityChecker::checkFinished,
             this, &NetworkModel::onConnectivitySecondaryCheckFinished);
 

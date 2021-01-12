@@ -77,7 +77,9 @@ void ConnectivityChecker::startCheck()
         timer.setSingleShot(true);
         QEventLoop synchronous;
         connect(&timer, &QTimer::timeout, &synchronous, &QEventLoop::quit);
-        connect(&nam, &QNetworkAccessManager::finished, &synchronous, &QEventLoop::quit);
+        connect(reply.get(), &QNetworkReply::finished, &synchronous, &QEventLoop::quit);
+        connect(reply.get(), &QNetworkReply::sslErrors, &synchronous, &QEventLoop::quit);
+        connect(reply.get(), QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error), &synchronous, &QEventLoop::quit);
         timer.start(TIMEOUT);
         synchronous.exec();
 

@@ -68,7 +68,7 @@ NetworkModel::NetworkModel(QObject *parent)
 NetworkModel::~NetworkModel()
 {
     qDeleteAll(m_devices);
-    qWarning() << __LINE__ << Q_FUNC_INFO << "delete thread: " << m_connectivityCheckThread;
+    qDebug() << __LINE__ << Q_FUNC_INFO << "delete thread: " << m_connectivityCheckThread;
     m_connectivityCheckThread->terminate();
     m_connectivityCheckThread->wait();
 }

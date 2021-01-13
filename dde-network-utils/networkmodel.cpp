@@ -54,23 +54,23 @@ NetworkDevice::DeviceType parseDeviceType(const QString &type)
 NetworkModel::NetworkModel(QObject *parent)
     : QObject(parent)
     , m_lastSecretDevice(nullptr)
-    , m_connectivityChecker(new ConnectivityChecker)
-    , m_connectivityCheckThread(new QThread(this))
+    , m_connectivityChecker(new ConnectivityChecker(this))
+//    , m_connectivityCheckThread(new QThread(this))
 {
-    connect(this, &NetworkModel::needCheckConnectivitySecondary,
-            m_connectivityChecker, &ConnectivityChecker::startCheck);
+//    connect(this, &NetworkModel::needCheckConnectivitySecondary,
+//            m_connectivityChecker, &ConnectivityChecker::startCheck);
     connect(m_connectivityChecker, &ConnectivityChecker::checkFinished,
             this, &NetworkModel::onConnectivitySecondaryCheckFinished);
 
-    m_connectivityChecker->moveToThread(m_connectivityCheckThread);
+//    m_connectivityChecker->moveToThread(m_connectivityCheckThread);
 }
 
 NetworkModel::~NetworkModel()
 {
     qDeleteAll(m_devices);
-    qDebug() << __LINE__ << Q_FUNC_INFO << "delete thread: " << m_connectivityCheckThread;
-    m_connectivityCheckThread->terminate();
-    m_connectivityCheckThread->wait();
+//    qDebug() << __LINE__ << Q_FUNC_INFO << "delete thread: " << m_connectivityCheckThread;
+//    m_connectivityCheckThread->terminate();
+//    m_connectivityCheckThread->wait();
 }
 
 const QString NetworkModel::connectionUuidByPath(const QString &connPath) const
@@ -598,10 +598,10 @@ void NetworkModel::onConnectivityChanged(int connectivity)
     // if the new connectivity state from NetworkManager is not Full,
     // check it again use our urls
     if (m_Connectivity != Full) {
-        if (!m_connectivityCheckThread->isRunning()) {
-            m_connectivityCheckThread->start();
-        }
-        Q_EMIT needCheckConnectivitySecondary();
+//        if (!m_connectivityCheckThread->isRunning()) {
+//            m_connectivityCheckThread->start();
+//        }
+        m_connectivityChecker->startCheck();
     }
 
     Q_EMIT connectivityChanged(m_Connectivity);

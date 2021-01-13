@@ -23,15 +23,14 @@
 #define CONNECTIVITYCHECKER_H
 
 #include <QObject>
-#include <QStringList>
-#include <QTimer>
+#include <QNetworkAccessManager>
 
 class QGSettings;
+class QTimer;
 
 namespace dde {
 
 namespace network {
-
 
 class ConnectivityChecker : public QObject
 {
@@ -50,6 +49,8 @@ private:
     QGSettings *m_settings;
     QStringList m_checkUrls;
     QTimer *m_checkConnectivityTimer;
+    int m_count;
+    QNetworkAccessManager nam;
 };
 
 }   // namespace network

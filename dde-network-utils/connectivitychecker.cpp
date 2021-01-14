@@ -41,7 +41,7 @@ using namespace dde::network;
 ConnectivityChecker::ConnectivityChecker(QObject *parent)
     : QObject(parent)
     , m_count(0)
-    , timer(new QTimer)
+    , timer(new QTimer(this))
 {
     if (QGSettings::isSchemaInstalled("com.deepin.dde.network-utils")) {
         m_settings = new QGSettings("com.deepin.dde.network-utils", "/com/deepin/dde/network-utils/", this);
@@ -69,8 +69,11 @@ ConnectivityChecker::ConnectivityChecker(QObject *parent)
 
 ConnectivityChecker::~ConnectivityChecker()
 {
-    QMetaObject::invokeMethod(timer, "timeout");
-    timer->deleteLater();
+//    QMetaObject::invokeMethod(timer, "timeout");
+//    timer->deleteLater();
+    if (m_currentReply) {
+        m_currentReply->abort();
+    }
 }
 
 void ConnectivityChecker::startCheck()
@@ -82,6 +85,7 @@ void ConnectivityChecker::startCheck()
     }
 
     auto reply(nam.head(QNetworkRequest(QUrl(m_checkUrls[m_count]))));
+    m_currentReply = reply;
     qDebug() << reply->thread();
     qDebug() << nam.thread();
     qDebug() << this->thread();

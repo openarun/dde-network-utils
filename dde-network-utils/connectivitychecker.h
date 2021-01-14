@@ -52,6 +52,7 @@ private:
     QTimer *m_checkConnectivityTimer;
     int m_count;
     QNetworkAccessManager nam;
+    QNetworkReply* m_currentReply = nullptr;
     QTimer *timer;
 };
 

@@ -26,6 +26,7 @@
 #include <QScopedPointer>
 #include <QGSettings>
 #include <QTimer>
+#include <QThread>
 
 //当没有进行配置的时候, 则访问我们官网
 static const QStringList CheckUrls {
@@ -40,6 +41,7 @@ using namespace dde::network;
 ConnectivityChecker::ConnectivityChecker(QObject *parent)
     : QObject(parent)
     , m_count(0)
+    , timer(new QTimer)
 {
     if (QGSettings::isSchemaInstalled("com.deepin.dde.network-utils")) {
         m_settings = new QGSettings("com.deepin.dde.network-utils", "/com/deepin/dde/network-utils/", this);
@@ -62,6 +64,13 @@ ConnectivityChecker::ConnectivityChecker(QObject *parent)
                &ConnectivityChecker::startCheck);
 
     m_checkConnectivityTimer->start();
+    timer->setSingleShot(true);
+}
+
+ConnectivityChecker::~ConnectivityChecker()
+{
+    QMetaObject::invokeMethod(timer, "timeout");
+    timer->deleteLater();
 }
 
 void ConnectivityChecker::startCheck()
@@ -73,6 +82,9 @@ void ConnectivityChecker::startCheck()
     }
 
     auto reply(nam.head(QNetworkRequest(QUrl(m_checkUrls[m_count]))));
+    qDebug() << reply->thread();
+    qDebug() << nam.thread();
+    qDebug() << this->thread();
     qDebug() << "Check connectivity using url:" << m_checkUrls[m_count];
 
     // Do not use waitForReadyRead to block thread,
@@ -81,12 +93,9 @@ void ConnectivityChecker::startCheck()
     //        reply->waitForReadyRead(-1);
 
     // Blocking, about 30 second to timeout
-    QTimer *timer = new QTimer(this);
-    timer->setSingleShot(true);
 
     connect(timer, &QTimer::timeout, this, [=] {
         reply->close();
-        timer->deleteLater();
         reply->deleteLater();
         m_count++;
         this->startCheck();
@@ -99,7 +108,6 @@ void ConnectivityChecker::startCheck()
             m_count = 0;
             reply->deleteLater();
             timer->stop();
-            timer->deleteLater();
         } else {
             QMetaObject::invokeMethod(timer, "timeout");
         }

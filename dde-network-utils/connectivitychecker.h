@@ -38,6 +38,7 @@ class ConnectivityChecker : public QObject
 
 public:
     explicit ConnectivityChecker(QObject *parent = nullptr);
+    ~ConnectivityChecker();
 
 Q_SIGNALS:
     void checkFinished(bool connectivity) const;
@@ -51,6 +52,7 @@ private:
     QTimer *m_checkConnectivityTimer;
     int m_count;
     QNetworkAccessManager nam;
+    QTimer *timer;
 };
 
 }   // namespace network

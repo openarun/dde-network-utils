@@ -93,10 +93,11 @@ void ConnectivityChecker::startCheck()
     //        reply->waitForReadyRead(-1);
 
     // Blocking, about 30 second to timeout
-
+    timer->disconnect();
     connect(timer, &QTimer::timeout, this, [=] {
         reply->close();
         reply->deleteLater();
+        timer->stop();
         m_count++;
         this->startCheck();
     });

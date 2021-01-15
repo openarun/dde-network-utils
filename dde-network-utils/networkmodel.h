@@ -75,6 +75,7 @@ class NetworkModel : public QObject
 
 public:
     explicit NetworkModel(QObject *parent = nullptr);
+    explicit NetworkModel(bool needCheck, QObject *parent = nullptr);
     ~NetworkModel();
     ProxyConfig getChainsProxy() { return m_chainsProxy;}
 

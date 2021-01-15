@@ -22,11 +22,10 @@
 #include "connectivitychecker.h"
 
 #include <QEventLoop>
+#include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QScopedPointer>
 #include <QGSettings>
-#include <QTimer>
-#include <QThread>
 
 //当没有进行配置的时候, 则访问我们官网
 static const QStringList CheckUrls {
@@ -38,10 +37,7 @@ static const QStringList CheckUrls {
 
 using namespace dde::network;
 
-ConnectivityChecker::ConnectivityChecker(QObject *parent)
-    : QObject(parent)
-    , m_count(0)
-    , timer(new QTimer(this))
+ConnectivityChecker::ConnectivityChecker(QObject *parent) : QObject(parent)
 {
     if (QGSettings::isSchemaInstalled("com.deepin.dde.network-utils")) {
         m_settings = new QGSettings("com.deepin.dde.network-utils", "/com/deepin/dde/network-utils/", this);
@@ -52,11 +48,6 @@ ConnectivityChecker::ConnectivityChecker(QObject *parent)
             }
         });
     }
-
-    if (m_checkUrls.isEmpty()) {
-        m_checkUrls = CheckUrls;
-    }
-
     m_checkConnectivityTimer =  new QTimer(this);
     m_checkConnectivityTimer->setInterval(TIMERINTERVAL);
 
@@ -64,58 +55,47 @@ ConnectivityChecker::ConnectivityChecker(QObject *parent)
                &ConnectivityChecker::startCheck);
 
     m_checkConnectivityTimer->start();
-    timer->setSingleShot(true);
-}
-
-ConnectivityChecker::~ConnectivityChecker()
-{
-//    QMetaObject::invokeMethod(timer, "timeout");
-//    timer->deleteLater();
-    if (m_currentReply) {
-        m_currentReply->abort();
-    }
 }
 
 void ConnectivityChecker::startCheck()
 {
-    if (m_checkUrls.size() <= m_count) {
-        Q_EMIT checkFinished(false);
-        m_count = 0;
-        return;
+    QNetworkAccessManager nam;
+    if (m_checkUrls.isEmpty()) {
+        m_checkUrls = CheckUrls;
+    }
+    for (auto url : m_checkUrls) {
+        QScopedPointer<QNetworkReply> reply(nam.head(QNetworkRequest(QUrl(url))));
+        qDebug() << "Check connectivity using url:" << url;
+
+        // Do not use waitForReadyRead to block thread,
+        // the QNetworkReply is not implement this virtual method
+        // and it will just return false immediately
+//        reply->waitForReadyRead(-1);
+
+        // Blocking, about 30 second to timeout
+        QTimer timer;
+        timer.setSingleShot(true);
+        QEventLoop synchronous;
+        connect(&timer, &QTimer::timeout, &synchronous, &QEventLoop::quit);
+        connect(&nam, &QNetworkAccessManager::finished, &synchronous, &QEventLoop::quit);
+        timer.start(TIMEOUT);
+        synchronous.exec();
+
+        reply->close();
+        //网络状态码中, 大于等于200, 小于等于206的都是网络正常
+        if (timer.isActive()) {
+            timer.stop();
+            if (reply->error() == QNetworkReply::NoError &&
+                    (reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() >= 200 &&
+                    reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() <= 206)) {
+                qDebug() << "Connected to url:" << url;
+                Q_EMIT checkFinished(true);
+                return;
+            }
+        } else {
+            qDebug() << "Timeout";
+        }
     }
 
-    auto reply(nam.head(QNetworkRequest(QUrl(m_checkUrls[m_count]))));
-    m_currentReply = reply;
-    qDebug() << reply->thread();
-    qDebug() << nam.thread();
-    qDebug() << this->thread();
-    qDebug() << "Check connectivity using url:" << m_checkUrls[m_count];
-
-    // Do not use waitForReadyRead to block thread,
-    // the QNetworkReply is not implement this virtual method
-    // and it will just return false immediately
-    //        reply->waitForReadyRead(-1);
-
-    // Blocking, about 30 second to timeout
-    timer->disconnect();
-    connect(timer, &QTimer::timeout, this, [=] {
-        reply->close();
-        reply->deleteLater();
-        timer->stop();
-        m_count++;
-        this->startCheck();
-    });
-    connect(reply, &QNetworkReply::finished, this, [=] {
-        int stateCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-        if (reply->error() == QNetworkReply::NoError && (stateCode >= 200 && stateCode <= 206)) {
-            qDebug() << "Connected to url:" << m_checkUrls.first();
-            Q_EMIT checkFinished(true);
-            m_count = 0;
-            reply->deleteLater();
-            timer->stop();
-        } else {
-            QMetaObject::invokeMethod(timer, "timeout");
-        }
-    });
-    timer->start(TIMEOUT);
+    Q_EMIT checkFinished(false);
 }

@@ -65,6 +65,25 @@ NetworkModel::NetworkModel(QObject *parent)
     m_connectivityChecker->moveToThread(m_connectivityCheckThread);
 }
 
+NetworkModel::NetworkModel(bool needCheck, QObject *parent)
+    : QObject (parent)
+    , m_lastSecretDevice(nullptr)
+    , m_connectivityChecker(nullptr)
+    , m_connectivityCheckThread(nullptr)
+{
+    if (needCheck) {
+        m_connectivityChecker = new ConnectivityChecker;
+        m_connectivityCheckThread = new QThread(this);
+
+        connect(this, &NetworkModel::needCheckConnectivitySecondary,
+                m_connectivityChecker, &ConnectivityChecker::startCheck);
+        connect(m_connectivityChecker, &ConnectivityChecker::checkFinished,
+                this, &NetworkModel::onConnectivitySecondaryCheckFinished);
+
+        m_connectivityChecker->moveToThread(m_connectivityCheckThread);
+    }
+}
+
 NetworkModel::~NetworkModel()
 {
     qDeleteAll(m_devices);
@@ -624,7 +643,7 @@ void NetworkModel::onConnectivityChanged(int connectivity)
 
     // if the new connectivity state from NetworkManager is not Full,
     // check it again use our urls
-    if (m_Connectivity != Full) {
+    if (m_Connectivity != Full && m_connectivityCheckThread) {
         if (!m_connectivityCheckThread->isRunning()) {
             m_connectivityCheckThread->start();
         }
